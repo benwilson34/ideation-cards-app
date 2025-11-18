@@ -1,0 +1,7 @@
+.card {
+  background-color: coral;
+  color: brown;
+  padding: 40px;
+  display: inline-block;
+  border-radius: 5px;
+}
