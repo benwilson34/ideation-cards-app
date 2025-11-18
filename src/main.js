@@ -1,4 +1,4 @@
-let cardContents = [];
+let allCardContents = [];
 
 function parseCsv(str) {
   const HEADERS = ["id", "sideA", "sideB", "notes"];
@@ -25,14 +25,32 @@ async function loadCardContentsCsv() {
   return parseCsv(result);
 }
 
-async function main() {
-  cardContents = await loadCardContentsCsv();
-  console.log({ cardContents });
+function getRandomCardContents() {
+  const randomIndex = Math.floor(Math.random() * allCardContents.length);
+  return allCardContents[randomIndex];
+}
 
-  const card1 = document.querySelector("#card1");
-  card1.innerHTML = "foo";
-  const card2 = document.querySelector("#card2");
-  card2.innerHTML = "bar";
+function createRandomCard(id) {
+  const el = document.querySelector(id);
+  const cardContents = getRandomCardContents();
+  let isCardOnSideA = true;
+
+  el.innerHTML = cardContents.sideA;
+  el.addEventListener("click", () => {
+    const nextCardSide = isCardOnSideA
+      ? cardContents.sideB
+      : cardContents.sideA;
+    el.innerHTML = nextCardSide;
+    isCardOnSideA = !isCardOnSideA;
+  });
+}
+
+async function main() {
+  allCardContents = await loadCardContentsCsv();
+  console.log({ cardContents: allCardContents });
+
+  createRandomCard("#card1");
+  createRandomCard("#card2");
 }
 
 main();

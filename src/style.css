@@ -4,4 +4,5 @@
   padding: 40px;
   display: inline-block;
   border-radius: 5px;
+  cursor: pointer;
 }
