@@ -1,3 +1,5 @@
+import * as fabric from "https://cdn.jsdelivr.net/npm/fabric@6.9.0/+esm";
+
 let allCardContents = [];
 
 function parseCsv(str) {
@@ -43,14 +45,44 @@ function createRandomCard(id) {
     el.innerHTML = nextCardSide;
     isCardOnSideA = !isCardOnSideA;
   });
+
+  const rect = new fabric.Rect({
+    controls: false,
+    fill: "coral",
+    borderScaleFactor: 4,
+    width: 50,
+    height: 50,
+  });
+  const text = new fabric.FabricText(cardContents.sideA, {
+    fill: "brown",
+    fontSize: 16,
+    width: 50,
+    height: 50,
+    textAlign: "center",
+  });
+  const group = new fabric.Group([rect, text], {
+    controls: false,
+  });
+
+  return group;
 }
 
 async function main() {
   allCardContents = await loadCardContentsCsv();
-  console.log({ cardContents: allCardContents });
 
-  createRandomCard("#card1");
-  createRandomCard("#card2");
+  const card1Rect = createRandomCard("#card1");
+  const card2Rect = createRandomCard("#card2");
+
+  const canvasEl = document.querySelector("canvas");
+  const canvas = new fabric.Canvas(canvasEl);
+
+  const text = new fabric.FabricText("Fabric.JS");
+  text.hasControls = false;
+  canvas.add(text);
+  canvas.centerObject(text);
+
+  canvas.add(card1Rect);
+  canvas.add(card2Rect);
 }
 
 main();
