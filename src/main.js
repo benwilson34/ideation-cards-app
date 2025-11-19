@@ -1,4 +1,14 @@
-import * as fabric from "https://cdn.jsdelivr.net/npm/fabric@6.9.0/+esm";
+import Pencil, {
+  Button,
+  Component,
+  LinearGradient,
+  Rectangle,
+  Scene,
+  Text,
+} from "https://unpkg.com/pencil.js@3.2.0/dist/pencil.esm.js";
+
+// palette: https://coolors.co/palette/0081a7-00afb9-fdfcdc-fed9b7-f07167
+const COLORS = ["#0081a7", "#00afb9", "#fdfcdc", "#fed9b7", "#f07167"];
 
 let allCardContents = [];
 
@@ -32,57 +42,96 @@ function getRandomCardContents() {
   return allCardContents[randomIndex];
 }
 
-function createRandomCard(id) {
-  const el = document.querySelector(id);
+function createRandomCard() {
   const cardContents = getRandomCardContents();
-  let isCardOnSideA = true;
 
-  el.innerHTML = cardContents.sideA;
-  el.addEventListener("click", () => {
+  const WIDTH = 300;
+  const HEIGHT = 200;
+  const ROTATION_RANGE = 0.005;
+  const rotation = Math.random() * ROTATION_RANGE * 2 - ROTATION_RANGE;
+  const rect = new Rectangle([0, 0], WIDTH, HEIGHT, {
+    fill: COLORS[4],
+    rounded: 4,
+    shadow: {
+      blur: 40,
+      position: [0, 20],
+      color: "#33333380",
+    },
+    cursor: Component.cursors.pointer,
+    rotationCenter: [WIDTH / 2, HEIGHT / 2],
+    rotation,
+  });
+  rect.draggable();
+
+  const fontSize = 28;
+  const text = new Text(
+    [fontSize, HEIGHT / 2 - fontSize / 2],
+    cardContents.sideA,
+    {
+      fill: COLORS[2],
+      fontSize: 28,
+      align: Text.alignments.center,
+      bold: true,
+      cursor: Component.cursors.pointer,
+    }
+  );
+  rect.add(text);
+
+  const flipButton = new Button([0, 0], {
+    value: "flip",
+    foreground: COLORS[2],
+    fontSize: 14,
+    fill: "transparent",
+    stroke: "transparent",
+    background: "#222",
+    hover: "#ffffff11",
+  });
+  let isCardOnSideA = true;
+  flipButton.on(Pencil.MouseEvent.events.down, () => {
     const nextCardSide = isCardOnSideA
       ? cardContents.sideB
       : cardContents.sideA;
-    el.innerHTML = nextCardSide;
+    text.text = nextCardSide;
     isCardOnSideA = !isCardOnSideA;
   });
+  rect.add(flipButton);
 
-  const rect = new fabric.Rect({
-    controls: false,
-    fill: "coral",
-    borderScaleFactor: 4,
-    width: 50,
-    height: 50,
-  });
-  const text = new fabric.FabricText(cardContents.sideA, {
-    fill: "brown",
-    fontSize: 16,
-    width: 50,
-    height: 50,
-    textAlign: "center",
-  });
-  const group = new fabric.Group([rect, text], {
-    controls: false,
-  });
-
-  return group;
+  return rect;
 }
 
 async function main() {
   allCardContents = await loadCardContentsCsv();
 
-  const card1Rect = createRandomCard("#card1");
-  const card2Rect = createRandomCard("#card2");
+  const scene = new Scene(undefined, {
+    fill: "#000000",
+  });
+  const { width, height } = scene;
+  scene.options.fill = new LinearGradient([0, 0], [0, height], {
+    0: COLORS[1],
+    1: COLORS[0],
+  });
 
-  const canvasEl = document.querySelector("canvas");
-  const canvas = new fabric.Canvas(canvasEl);
+  const card1 = createRandomCard();
+  card1.position.set([width / 4, height / 2]);
+  const card2 = createRandomCard();
+  card2.position.set([(width * 3) / 4, height / 2]);
 
-  const text = new fabric.FabricText("Fabric.JS");
-  text.hasControls = false;
-  canvas.add(text);
-  canvas.centerObject(text);
-
-  canvas.add(card1Rect);
-  canvas.add(card2Rect);
+  scene
+    .add(card1, card2)
+    .startLoop()
+    .on(
+      "draw",
+      () => {
+        // sun.position.lerp(scene.cursorPosition, 0.05);
+        // const sunSettingRatio = (sun.position.y - height / 4) / (height / 2);
+        // scene.options.fill.set("#45a8ff").lerp("#150a1b", sunSettingRatio);
+        // ocean.options.fill.position.set(
+        //   sun.position.x,
+        //   height / 2 - sun.position.y
+        // );
+      },
+      true
+    );
 }
 
 main();

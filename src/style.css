@@ -1,8 +1,9 @@
 .card {
+  display: none;
   background-color: coral;
   color: brown;
   padding: 40px;
-  display: inline-block;
+  /* display: inline-block; */
   border-radius: 5px;
   cursor: pointer;
 }
