@@ -9,6 +9,8 @@ import Pencil, {
 
 // palette: https://coolors.co/palette/0081a7-00afb9-fdfcdc-fed9b7-f07167
 const COLORS = ["#0081a7", "#00afb9", "#fdfcdc", "#fed9b7", "#f07167"];
+const CARD_WIDTH = 300;
+const CARD_HEIGHT = 200;
 
 let allCardContents = [];
 
@@ -45,11 +47,9 @@ function getRandomCardContents() {
 function createRandomCard() {
   const cardContents = getRandomCardContents();
 
-  const WIDTH = 300;
-  const HEIGHT = 200;
   const ROTATION_RANGE = 0.005;
   const rotation = Math.random() * ROTATION_RANGE * 2 - ROTATION_RANGE;
-  const rect = new Rectangle([0, 0], WIDTH, HEIGHT, {
+  const rect = new Rectangle([0, 0], CARD_WIDTH, CARD_HEIGHT, {
     fill: COLORS[4],
     rounded: 4,
     shadow: {
@@ -58,14 +58,14 @@ function createRandomCard() {
       color: "#33333380",
     },
     cursor: Component.cursors.pointer,
-    rotationCenter: [WIDTH / 2, HEIGHT / 2],
+    rotationCenter: [CARD_WIDTH / 2, CARD_HEIGHT / 2],
     rotation,
   });
   rect.draggable();
 
   const fontSize = 28;
   const text = new Text(
-    [fontSize, HEIGHT / 2 - fontSize / 2],
+    [fontSize, CARD_HEIGHT / 2 - fontSize / 2],
     cardContents.sideA,
     {
       fill: COLORS[2],
@@ -112,9 +112,9 @@ async function main() {
   });
 
   const card1 = createRandomCard();
-  card1.position.set([width / 4, height / 2]);
+  card1.position.set(scene.center.subtract(CARD_WIDTH, CARD_HEIGHT / 2));
   const card2 = createRandomCard();
-  card2.position.set([(width * 3) / 4, height / 2]);
+  card2.position.set(scene.center.add(0, -CARD_HEIGHT / 2));
 
   scene
     .add(card1, card2)
