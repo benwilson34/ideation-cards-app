@@ -1,6 +1,7 @@
 import Pencil, {
   Button,
   Component,
+  Container,
   LinearGradient,
   Position,
   Rectangle,
@@ -20,6 +21,16 @@ const COLORS = [
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
+const CARD_RECT_STYLES = {
+  fill: COLORS[4],
+  rounded: 4,
+  shadow: {
+    blur: 40,
+    position: [0, 20],
+    color: "#33333380",
+  },
+  cursor: Component.cursors.pointer,
+};
 const CARD_BUTTON_STYLES = {
   foreground: COLORS[2],
   fontSize: 14,
@@ -72,15 +83,8 @@ function createRandomCard() {
   const ROTATION_RANGE = 0.005;
   const rotation = Math.random() * ROTATION_RANGE * 2 - ROTATION_RANGE;
   const rect = new Rectangle([0, 0], CARD_WIDTH, CARD_HEIGHT, {
-    fill: COLORS[4],
-    rounded: 4,
-    shadow: {
-      blur: 40,
-      position: [0, 20],
-      color: "#33333380",
-    },
+    ...CARD_RECT_STYLES,
     scale: new Position(1, 1),
-    cursor: Component.cursors.pointer,
     rotationCenter: [CARD_WIDTH / 2, CARD_HEIGHT / 2],
     rotation,
   });
@@ -184,6 +188,42 @@ function createRandomCard() {
   return rect;
 }
 
+function renderDeck(scene) {
+  const deck = new Container();
+  const DECK_CARD_COUNT = 10;
+  const DECK_CARD_OFFSET_PX = 6;
+  for (let i = 0; i < DECK_CARD_COUNT; i += 1) {
+    const card = new Rectangle(
+      [
+        scene.width / 2 - CARD_WIDTH / 2,
+        -CARD_HEIGHT / 2 - i * DECK_CARD_OFFSET_PX,
+      ],
+      CARD_WIDTH,
+      CARD_HEIGHT,
+      {
+        ...CARD_RECT_STYLES,
+        stroke: COLORS[4],
+        ...(i !== 0 && {
+          shadow: {
+            blur: 40,
+            position: [0, 3],
+            color: "#33333320",
+          },
+        }),
+      }
+    );
+    deck.add(card);
+  }
+  deck.on(Pencil.MouseEvent.events.down, () => {
+    clickCount += 1;
+    const newCard = createRandomCard();
+    newCard.options.zIndex = clickCount;
+    newCard.position.set(scene.center);
+    scene.add(newCard);
+  });
+  return deck;
+}
+
 function getRandomPositionOffset() {
   const X_RANGE = 50;
   const Y_RANGE = 100;
@@ -204,22 +244,7 @@ async function main() {
     1: COLORS[0],
   });
 
-  const deck = new Rectangle(
-    [width / 2 - CARD_WIDTH / 2, -CARD_HEIGHT / 2],
-    CARD_WIDTH,
-    CARD_HEIGHT,
-    {
-      fill: "green",
-      cursor: Component.cursors.pointer,
-    }
-  );
-  deck.on(Pencil.MouseEvent.events.down, () => {
-    clickCount += 1;
-    const newCard = createRandomCard();
-    newCard.options.zIndex = clickCount;
-    newCard.position.set(scene.center);
-    scene.add(newCard);
-  });
+  const deck = renderDeck(scene);
   scene.add(deck);
 
   const card1 = createRandomCard();
