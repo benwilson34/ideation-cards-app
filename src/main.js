@@ -39,6 +39,7 @@ const CARD_BUTTON_STYLES = {
   hover: "#ffffff11",
   rounded: 4,
 };
+const DECK_CONTROLS_SPACING_PX = 40;
 const CUSTOM_FONT_URL =
   // "//fonts.gstatic.com/s/courgette/v5/wEO_EBrAnc9BLjLQAUk1VvoK.woff2";
   // "https://fonts.gstatic.com/s/amaticsc/v28/TUZyzwprpvBS1izr_vOECuSf.woff2";
@@ -189,15 +190,17 @@ function createRandomCard() {
 }
 
 function renderDeck(scene) {
+  const deckPosition = new Position(
+    scene.center.x - CARD_WIDTH - DECK_CONTROLS_SPACING_PX / 2,
+    -CARD_HEIGHT / 2
+  );
+  // const deckPosition = scene.center.clone();
   const deck = new Container();
   const DECK_CARD_COUNT = 10;
   const DECK_CARD_OFFSET_PX = 6;
   for (let i = 0; i < DECK_CARD_COUNT; i += 1) {
     const card = new Rectangle(
-      [
-        scene.width / 2 - CARD_WIDTH / 2,
-        -CARD_HEIGHT / 2 - i * DECK_CARD_OFFSET_PX,
-      ],
+      deckPosition.clone().subtract(0, i * DECK_CARD_OFFSET_PX),
       CARD_WIDTH,
       CARD_HEIGHT,
       {
@@ -214,6 +217,15 @@ function renderDeck(scene) {
     );
     deck.add(card);
   }
+  const hintText = new Text(
+    deckPosition.clone().add(60, 120),
+    "click to draw a new card",
+    {
+      fill: COLORS[2],
+      fontSize: 16,
+    }
+  );
+  deck.add(hintText);
   deck.on(Pencil.MouseEvent.events.down, () => {
     clickCount += 1;
     const newCard = createRandomCard();
@@ -222,6 +234,34 @@ function renderDeck(scene) {
     scene.add(newCard);
   });
   return deck;
+}
+
+function renderDiscardArea(scene) {
+  const discardAreaPosition = new Position(
+    scene.center.x + DECK_CONTROLS_SPACING_PX / 2,
+    -(CARD_HEIGHT / 2) - 2
+  );
+  const discardArea = new Container();
+
+  const outline = new Rectangle(discardAreaPosition, CARD_WIDTH, CARD_HEIGHT, {
+    fill: "transparent",
+    stroke: COLORS[2],
+    dashed: true,
+    rounded: 4,
+  });
+  discardArea.add(outline);
+
+  // const hintText = new Text(
+  //   discardAreaPosition.clone().add(60, 120),
+  //   "drag a card here to discard",
+  //   {
+  //     fill: COLORS[2],
+  //     fontSize: 16,
+  //   }
+  // );
+  // discardArea.add(hintText);
+
+  return discardArea;
 }
 
 function getRandomPositionOffset() {
@@ -246,6 +286,9 @@ async function main() {
 
   const deck = renderDeck(scene);
   scene.add(deck);
+
+  const discardArea = renderDiscardArea(scene);
+  scene.add(discardArea);
 
   const card1 = createRandomCard();
   const card1Offset = getRandomPositionOffset().multiply(-1, 1);
