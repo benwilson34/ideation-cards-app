@@ -8,7 +8,7 @@ import Pencil, {
   Text,
 } from "https://unpkg.com/pencil.js@3.2.0/dist/pencil.esm.js";
 
-// palette: https://coolors.co/palette/0081a7-00afb9-fdfcdc-fed9b7-f07167
+// based on palette: https://coolors.co/palette/0081a7-00afb9-fdfcdc-fed9b7-f07167
 const COLORS = [
   "#0081a7",
   "#00afb9",
@@ -20,6 +20,14 @@ const COLORS = [
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
+const CARD_BUTTON_STYLES = {
+  foreground: COLORS[2],
+  fontSize: 14,
+  fill: "transparent",
+  stroke: "#ffffff11",
+  hover: "#ffffff11",
+  rounded: 4,
+};
 const CUSTOM_FONT_URL =
   // "//fonts.gstatic.com/s/courgette/v5/wEO_EBrAnc9BLjLQAUk1VvoK.woff2";
   // "https://fonts.gstatic.com/s/amaticsc/v28/TUZyzwprpvBS1izr_vOECuSf.woff2";
@@ -84,9 +92,9 @@ function createRandomCard() {
   });
 
   const fontSize = 56;
-  const PADDING = 14;
+  const PADDING = 8;
   const text = new Text(
-    [PADDING * 2, CARD_HEIGHT / 2 - fontSize / 2 + 10],
+    [PADDING * 3, CARD_HEIGHT / 2 - fontSize / 2 + 10],
     cardContents.sideA,
     {
       fill: COLORS[2],
@@ -111,16 +119,22 @@ function createRandomCard() {
   );
   rect.add(idText);
 
+  const discardButton = new Button([CARD_WIDTH - PADDING - 22, PADDING], {
+    ...CARD_BUTTON_STYLES,
+    value: "X",
+  });
+  discardButton.on(Pencil.MouseEvent.events.down, () => {
+    // TODO animate
+    rect.delete();
+  });
+  rect.add(discardButton);
+
   let isAnimating = false;
   let animationFrameCount = 0;
   let isCardOnSideA = true;
   const flipButton = new Button([PADDING, PADDING], {
+    ...CARD_BUTTON_STYLES,
     value: "flip",
-    foreground: COLORS[2],
-    fontSize: 14,
-    fill: "transparent",
-    stroke: "transparent",
-    hover: "#ffffff11",
   });
   flipButton.on(Pencil.MouseEvent.events.down, () => {
     if (isAnimating) {
@@ -190,9 +204,23 @@ async function main() {
     1: COLORS[0],
   });
 
-  const preloadFontText = new Text([0, 0], "", {
-    font: CUSTOM_FONT_URL,
+  const deck = new Rectangle(
+    [width / 2 - CARD_WIDTH / 2, -CARD_HEIGHT / 2],
+    CARD_WIDTH,
+    CARD_HEIGHT,
+    {
+      fill: "green",
+      cursor: Component.cursors.pointer,
+    }
+  );
+  deck.on(Pencil.MouseEvent.events.down, () => {
+    clickCount += 1;
+    const newCard = createRandomCard();
+    newCard.options.zIndex = clickCount;
+    newCard.position.set(scene.center);
+    scene.add(newCard);
   });
+  scene.add(deck);
 
   const card1 = createRandomCard();
   const card1Offset = getRandomPositionOffset().multiply(-1, 1);
@@ -205,6 +233,9 @@ async function main() {
 
   scene.add(card1, card2);
 
+  const preloadFontText = new Text([0, 0], "", {
+    font: CUSTOM_FONT_URL,
+  });
   preloadFontText.on("ready", () => {
     scene.startLoop();
   });
