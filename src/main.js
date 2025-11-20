@@ -20,6 +20,10 @@ const COLORS = [
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
+const CUSTOM_FONT_URL =
+  // "//fonts.gstatic.com/s/courgette/v5/wEO_EBrAnc9BLjLQAUk1VvoK.woff2";
+  // "https://fonts.gstatic.com/s/amaticsc/v28/TUZyzwprpvBS1izr_vOECuSf.woff2";
+  "https://fonts.gstatic.com/s/comingsoon/v20/qWcuB6mzpYL7AJ2VfdQR1t-VWDk.woff2";
 
 let allCardContents = [];
 let clickCount = 0;
@@ -79,15 +83,15 @@ function createRandomCard() {
     rect.options.zIndex = clickCount + 1;
   });
 
-  const fontSize = 28;
-  const MAJOR_PADDING = 28;
-  const MINOR_PADDING = 14;
+  const fontSize = 56;
+  const PADDING = 14;
   const text = new Text(
-    [MAJOR_PADDING, CARD_HEIGHT / 2 - fontSize / 2],
+    [PADDING * 2, CARD_HEIGHT / 2 - fontSize / 2 + 10],
     cardContents.sideA,
     {
       fill: COLORS[2],
-      fontSize: 28,
+      font: CUSTOM_FONT_URL,
+      fontSize,
       align: Text.alignments.center,
       bold: true,
       cursor: Component.cursors.pointer,
@@ -97,7 +101,7 @@ function createRandomCard() {
 
   const ID_TEXT_FONT_SIZE = 14;
   const idText = new Text(
-    [MINOR_PADDING, CARD_HEIGHT - ID_TEXT_FONT_SIZE - MINOR_PADDING],
+    [PADDING, CARD_HEIGHT - ID_TEXT_FONT_SIZE - PADDING],
     `#${cardContents.id}a`,
     {
       fill: COLORS[2],
@@ -110,7 +114,7 @@ function createRandomCard() {
   let isAnimating = false;
   let animationFrameCount = 0;
   let isCardOnSideA = true;
-  const flipButton = new Button([0, 0], {
+  const flipButton = new Button([PADDING, PADDING], {
     value: "flip",
     foreground: COLORS[2],
     fontSize: 14,
@@ -186,6 +190,10 @@ async function main() {
     1: COLORS[0],
   });
 
+  const preloadFontText = new Text([0, 0], "", {
+    font: CUSTOM_FONT_URL,
+  });
+
   const card1 = createRandomCard();
   const card1Offset = getRandomPositionOffset().multiply(-1, 1);
   card1.position.set(
@@ -195,22 +203,11 @@ async function main() {
   const card2Offset = getRandomPositionOffset();
   card2.position.set(scene.center.add(0, -CARD_HEIGHT / 2).add(card2Offset));
 
-  scene
-    .add(card1, card2)
-    .startLoop()
-    .on(
-      "draw",
-      () => {
-        // sun.position.lerp(scene.cursorPosition, 0.05);
-        // const sunSettingRatio = (sun.position.y - height / 4) / (height / 2);
-        // scene.options.fill.set("#45a8ff").lerp("#150a1b", sunSettingRatio);
-        // ocean.options.fill.position.set(
-        //   sun.position.x,
-        //   height / 2 - sun.position.y
-        // );
-      },
-      true
-    );
+  scene.add(card1, card2);
+
+  preloadFontText.on("ready", () => {
+    scene.startLoop();
+  });
 }
 
 main();
