@@ -2,6 +2,7 @@ import Pencil, {
   Button,
   Component,
   LinearGradient,
+  Position,
   Rectangle,
   Scene,
   Text,
@@ -11,6 +12,7 @@ import Pencil, {
 const COLORS = ["#0081a7", "#00afb9", "#fdfcdc", "#fed9b7", "#f07167"];
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
+const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
 
 let allCardContents = [];
 
@@ -57,6 +59,7 @@ function createRandomCard() {
       position: [0, 20],
       color: "#33333380",
     },
+    scale: new Position(1, 1),
     cursor: Component.cursors.pointer,
     rotationCenter: [CARD_WIDTH / 2, CARD_HEIGHT / 2],
     rotation,
@@ -77,6 +80,9 @@ function createRandomCard() {
   );
   rect.add(text);
 
+  let isAnimating = false;
+  let animationFrameCount = 0;
+  let isCardOnSideA = true;
   const flipButton = new Button([0, 0], {
     value: "flip",
     foreground: COLORS[2],
@@ -86,15 +92,46 @@ function createRandomCard() {
     background: "#222",
     hover: "#ffffff11",
   });
-  let isCardOnSideA = true;
   flipButton.on(Pencil.MouseEvent.events.down, () => {
-    const nextCardSide = isCardOnSideA
-      ? cardContents.sideB
-      : cardContents.sideA;
-    text.text = nextCardSide;
-    isCardOnSideA = !isCardOnSideA;
+    if (isAnimating) {
+      return;
+    }
+    isAnimating = true;
   });
   rect.add(flipButton);
+
+  rect.on("draw", () => {
+    if (!isAnimating) {
+      return;
+    }
+
+    if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[1]) {
+      const yScale = 1 - animationFrameCount / CARD_FLIP_ANIMATION_TIMELINE[1];
+      rect.options.scale.set(1, yScale);
+      rect.position.add(0, CARD_HEIGHT / 2 / CARD_FLIP_ANIMATION_TIMELINE[1]);
+    } else if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[2]) {
+      const nextCardSide = isCardOnSideA
+        ? cardContents.sideB
+        : cardContents.sideA;
+      text.text = nextCardSide;
+      isCardOnSideA = !isCardOnSideA;
+    } else if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[3]) {
+      const segmentOffset =
+        animationFrameCount - CARD_FLIP_ANIMATION_TIMELINE[2];
+      const yScale = segmentOffset / CARD_FLIP_ANIMATION_TIMELINE[2];
+      rect.options.scale.set(1, yScale);
+      rect.position.subtract(
+        0,
+        CARD_HEIGHT /
+          2 /
+          (CARD_FLIP_ANIMATION_TIMELINE[3] - CARD_FLIP_ANIMATION_TIMELINE[2])
+      );
+    } else {
+      isAnimating = false;
+      animationFrameCount = 0;
+    }
+    animationFrameCount += 1;
+  });
 
   return rect;
 }
