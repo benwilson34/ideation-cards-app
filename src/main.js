@@ -22,6 +22,7 @@ const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
 
 let allCardContents = [];
+let clickCount = 0;
 
 function parseCsv(str) {
   const HEADERS = ["id", "sideA", "sideB", "notes"];
@@ -72,6 +73,11 @@ function createRandomCard() {
     rotation,
   });
   rect.draggable();
+  rect.on(Pencil.MouseEvent.events.down, () => {
+    // NOTE maybe there's some max zIndex that this would reach eventually, not sure
+    clickCount += 1;
+    rect.options.zIndex = clickCount + 1;
+  });
 
   const fontSize = 28;
   const MAJOR_PADDING = 28;
@@ -110,7 +116,6 @@ function createRandomCard() {
     fontSize: 14,
     fill: "transparent",
     stroke: "transparent",
-    background: "#222",
     hover: "#ffffff11",
   });
   flipButton.on(Pencil.MouseEvent.events.down, () => {
@@ -126,6 +131,7 @@ function createRandomCard() {
       return;
     }
 
+    // flip animation
     if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[1]) {
       const yScale = 1 - animationFrameCount / CARD_FLIP_ANIMATION_TIMELINE[1];
       rect.options.scale.set(1, yScale);
