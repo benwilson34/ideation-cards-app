@@ -9,7 +9,14 @@ import Pencil, {
 } from "https://unpkg.com/pencil.js@3.2.0/dist/pencil.esm.js";
 
 // palette: https://coolors.co/palette/0081a7-00afb9-fdfcdc-fed9b7-f07167
-const COLORS = ["#0081a7", "#00afb9", "#fdfcdc", "#fed9b7", "#f07167"];
+const COLORS = [
+  "#0081a7",
+  "#00afb9",
+  "#fdfcdc",
+  "#fed9b7",
+  "#f07167",
+  "#eebf25ff",
+];
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
@@ -67,8 +74,10 @@ function createRandomCard() {
   rect.draggable();
 
   const fontSize = 28;
+  const MAJOR_PADDING = 28;
+  const MINOR_PADDING = 14;
   const text = new Text(
-    [fontSize, CARD_HEIGHT / 2 - fontSize / 2],
+    [MAJOR_PADDING, CARD_HEIGHT / 2 - fontSize / 2],
     cardContents.sideA,
     {
       fill: COLORS[2],
@@ -79,6 +88,18 @@ function createRandomCard() {
     }
   );
   rect.add(text);
+
+  const ID_TEXT_FONT_SIZE = 14;
+  const idText = new Text(
+    [MINOR_PADDING, CARD_HEIGHT - ID_TEXT_FONT_SIZE - MINOR_PADDING],
+    `#${cardContents.id}a`,
+    {
+      fill: COLORS[2],
+      fontSize: ID_TEXT_FONT_SIZE,
+      cursor: Component.cursors.pointer,
+    }
+  );
+  rect.add(idText);
 
   let isAnimating = false;
   let animationFrameCount = 0;
@@ -115,6 +136,9 @@ function createRandomCard() {
         : cardContents.sideA;
       text.text = nextCardSide;
       isCardOnSideA = !isCardOnSideA;
+      rect.options.fill = COLORS[isCardOnSideA ? 4 : 5];
+      idText.text = `#${cardContents.id}${isCardOnSideA ? "a" : "b"}`;
+      rect.options.rotation = -1 * rect.options.rotation;
     } else if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[3]) {
       const segmentOffset =
         animationFrameCount - CARD_FLIP_ANIMATION_TIMELINE[2];
