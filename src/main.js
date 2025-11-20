@@ -160,6 +160,14 @@ function createRandomCard() {
   return rect;
 }
 
+function getRandomPositionOffset() {
+  const X_RANGE = 50;
+  const Y_RANGE = 100;
+  const xOffset = Math.random() * X_RANGE;
+  const yOffset = Math.random() * Y_RANGE - Y_RANGE / 2; // center y offset
+  return new Position(xOffset, yOffset);
+}
+
 async function main() {
   allCardContents = await loadCardContentsCsv();
 
@@ -173,9 +181,13 @@ async function main() {
   });
 
   const card1 = createRandomCard();
-  card1.position.set(scene.center.subtract(CARD_WIDTH, CARD_HEIGHT / 2));
+  const card1Offset = getRandomPositionOffset().multiply(-1, 1);
+  card1.position.set(
+    scene.center.subtract(CARD_WIDTH, CARD_HEIGHT / 2).add(card1Offset)
+  );
   const card2 = createRandomCard();
-  card2.position.set(scene.center.add(0, -CARD_HEIGHT / 2));
+  const card2Offset = getRandomPositionOffset();
+  card2.position.set(scene.center.add(0, -CARD_HEIGHT / 2).add(card2Offset));
 
   scene
     .add(card1, card2)
