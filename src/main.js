@@ -7,7 +7,8 @@ import Pencil, {
   Rectangle,
   Scene,
   Text,
-} from "https://unpkg.com/pencil.js@3.2.0/dist/pencil.esm.js";
+} from "https://unpkg.com/pencil.js@3.2.0/dist/pencil.esm.js"; // TODO copy dependency to local?
+import { easeOutCubic } from "./public/vendor/easing.js";
 
 // based on palette: https://coolors.co/palette/0081a7-00afb9-fdfcdc-fed9b7-f07167
 const COLORS = [
@@ -21,7 +22,7 @@ const COLORS = [
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
-const CARD_DISCARD_ANIMATION_FRAME_LENGTH = 120;
+const CARD_DISCARD_ANIMATION_FRAME_LENGTH = 180;
 const CARD_RECT_STYLES = {
   fill: COLORS[4],
   rounded: 4,
@@ -203,9 +204,10 @@ function createRandomCard() {
     if (isAnimatingDiscard) {
       const segmentOffset =
         animationFrameCount / CARD_DISCARD_ANIMATION_FRAME_LENGTH;
+      const easedOffset = easeOutCubic(segmentOffset);
       rect.position = discardAnimationPosition
         .clone()
-        .lerp(discardAreaPosition, segmentOffset);
+        .lerp(discardAreaPosition, easedOffset);
       animationFrameCount += 1;
       if (animationFrameCount === CARD_DISCARD_ANIMATION_FRAME_LENGTH) {
         isAnimatingDiscard = false;
@@ -223,7 +225,6 @@ function renderDeck(scene) {
     scene.center.x - CARD_WIDTH - DECK_CONTROLS_SPACING_PX / 2,
     -CARD_HEIGHT / 2
   );
-  // const deckPosition = scene.center.clone();
   const deck = new Container();
   const DECK_CARD_COUNT = 10;
   const DECK_CARD_OFFSET_PX = 6;

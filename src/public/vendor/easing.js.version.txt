@@ -1,0 +1,2 @@
+repo: https://github.com/AndrewRayCode/easing-utils
+commit: 39b5077030754f088a38f1b0f9f35c1cd6c7dd03
