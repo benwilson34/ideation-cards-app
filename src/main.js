@@ -1,5 +1,14 @@
+/**
+ * Pencil.js wishlist:
+ *   - `draggable` - add optional "target" container. I want to "seal" the card text behind a
+ *      transparent "handle" rect which moves the whole card. Right now you can't drag cards if
+ *      you mousedown on any card text. Similar point with the pseudo-3d lowlight
+ *   - more control over (Rectangle) borders - per-side thickness, color, others?
+ */
+
 import Pencil, {
   Button,
+  Color,
   Component,
   Container,
   LinearGradient,
@@ -19,6 +28,7 @@ const COLORS = [
   "#f07167",
   "#eebf25ff",
 ];
+// TODO would be better to prepare Colors here; label semantically; literal lowlight colors here too
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
@@ -26,11 +36,11 @@ const CARD_MOVEMENT_ANIMATION_FRAME_LENGTH = 180;
 const CARD_RECT_STYLES = {
   fill: COLORS[4],
   rounded: 4,
-  shadow: {
-    blur: 40,
-    position: [0, 20],
-    color: "#33333380",
-  },
+  // shadow: {
+  //   blur: 40,
+  //   position: [0, 20],
+  //   color: "#66666620",
+  // },
   cursor: Component.cursors.pointer,
 };
 const CARD_BUTTON_STYLES = {
@@ -84,22 +94,41 @@ function getRandomCardContents() {
   return allCardContents[randomIndex];
 }
 
+function createBlankCard() {
+  const mainRect = new Rectangle([0, 0], CARD_WIDTH, CARD_HEIGHT, {
+    ...CARD_RECT_STYLES,
+    rotationCenter: new Position(CARD_WIDTH / 2, CARD_HEIGHT / 2),
+    scale: new Position(1, 1),
+    rotation: 0,
+  });
+
+  const lowlightRect = mainRect.clone();
+  const LOWLIGHT_OFFSET_PX = 2;
+  lowlightRect.height = lowlightRect.height + LOWLIGHT_OFFSET_PX;
+
+  const color = new Color(COLORS[4]).lightness(0.6);
+  lowlightRect.options.fill = color;
+  lowlightRect.options.stroke = color;
+  lowlightRect.options.zIndex = -1;
+  lowlightRect.options.rotation = 0;
+  mainRect.add(lowlightRect);
+  mainRect.lowlightRect = lowlightRect; // ?
+
+  return mainRect;
+}
+
 function createRandomCard(initialPosition, dealPosition) {
+  const card = createBlankCard();
   const cardContents = getRandomCardContents();
 
   const ROTATION_RANGE = 0.005;
-  const rotation = Math.random() * ROTATION_RANGE * 2 - ROTATION_RANGE;
-  const rect = new Rectangle([0, 0], CARD_WIDTH, CARD_HEIGHT, {
-    ...CARD_RECT_STYLES,
-    scale: new Position(1, 1),
-    rotationCenter: [CARD_WIDTH / 2, CARD_HEIGHT / 2],
-    rotation,
-  });
-  const draggable = rect.draggable();
-  rect.on(Pencil.MouseEvent.events.down, () => {
+  card.options.rotation = Math.random() * ROTATION_RANGE * 2 - ROTATION_RANGE;
+
+  const draggable = card.draggable();
+  card.on(Pencil.MouseEvent.events.down, () => {
     // NOTE maybe there's some max zIndex that this would reach eventually, not sure
     clickCount += 1;
-    rect.options.zIndex = clickCount + 1;
+    card.options.zIndex = clickCount + 1;
   });
 
   const fontSize = 56;
@@ -116,7 +145,7 @@ function createRandomCard(initialPosition, dealPosition) {
       cursor: Component.cursors.pointer,
     }
   );
-  rect.add(text);
+  card.add(text);
 
   const ID_TEXT_FONT_SIZE = 14;
   const idText = new Text(
@@ -128,7 +157,7 @@ function createRandomCard(initialPosition, dealPosition) {
       cursor: Component.cursors.pointer,
     }
   );
-  rect.add(idText);
+  card.add(idText);
 
   let isAnimatingMovement = true;
   let movementAnimationStartPosition = initialPosition.clone();
@@ -148,7 +177,7 @@ function createRandomCard(initialPosition, dealPosition) {
       return;
     }
     isAnimatingMovement = true;
-    movementAnimationStartPosition = rect.position.clone();
+    movementAnimationStartPosition = card.position.clone();
     movementAnimationEndPosition = discardAreaPosition
       .clone()
       .subtract(0, discardCount * CARD_STACK_OFFSET_PX);
@@ -156,7 +185,7 @@ function createRandomCard(initialPosition, dealPosition) {
     // TODO remove other event listeners?
     discardCount += 1;
   });
-  rect.add(discardButton);
+  card.add(discardButton);
 
   let animationFrameCount = 0;
   let isCardOnSideA = true;
@@ -170,9 +199,9 @@ function createRandomCard(initialPosition, dealPosition) {
     }
     isAnimatingFlip = true;
   });
-  rect.add(flipButton);
+  card.add(flipButton);
 
-  rect.on("draw", () => {
+  card.on("draw", () => {
     if (!isAnimating()) {
       return;
     }
@@ -181,23 +210,30 @@ function createRandomCard(initialPosition, dealPosition) {
       if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[1]) {
         const yScale =
           1 - animationFrameCount / CARD_FLIP_ANIMATION_TIMELINE[1];
-        rect.options.scale.set(1, yScale);
-        rect.position.add(0, CARD_HEIGHT / 2 / CARD_FLIP_ANIMATION_TIMELINE[1]);
+        card.options.scale.set(1, yScale);
+        card.position.add(0, CARD_HEIGHT / 2 / CARD_FLIP_ANIMATION_TIMELINE[1]);
       } else if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[2]) {
         const nextCardSide = isCardOnSideA
           ? cardContents.sideB
           : cardContents.sideA;
         text.text = nextCardSide;
         isCardOnSideA = !isCardOnSideA;
-        rect.options.fill = COLORS[isCardOnSideA ? 4 : 5];
+
+        const nextColor = COLORS[isCardOnSideA ? 4 : 5];
+        card.options.fill = nextColor;
+        const nextLightness = isCardOnSideA ? 0.6 : 0.4;
+        const color = new Color(nextColor).lightness(nextLightness);
+        card.lowlightRect.options.fill = color;
+        card.lowlightRect.options.stroke = color;
+
         idText.text = `#${cardContents.id}${isCardOnSideA ? "a" : "b"}`;
-        rect.options.rotation = -1 * rect.options.rotation;
+        card.options.rotation = -1 * card.options.rotation;
       } else if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[3]) {
         const segmentOffset =
           animationFrameCount - CARD_FLIP_ANIMATION_TIMELINE[2];
         const yScale = segmentOffset / CARD_FLIP_ANIMATION_TIMELINE[2];
-        rect.options.scale.set(1, yScale);
-        rect.position.subtract(
+        card.options.scale.set(1, yScale);
+        card.position.subtract(
           0,
           CARD_HEIGHT /
             2 /
@@ -211,13 +247,14 @@ function createRandomCard(initialPosition, dealPosition) {
       }
       animationFrameCount = 0;
       isAnimatingFlip = false;
+      card.options.scale.set(1, 1); // FIXME animation end above seems to be off by one
     }
 
     if (isAnimatingMovement) {
       const segmentOffset =
         animationFrameCount / CARD_MOVEMENT_ANIMATION_FRAME_LENGTH;
       const easedOffset = easeOutCubic(segmentOffset);
-      rect.position = movementAnimationStartPosition
+      card.position = movementAnimationStartPosition
         .clone()
         .lerp(movementAnimationEndPosition, easedOffset);
 
@@ -230,7 +267,7 @@ function createRandomCard(initialPosition, dealPosition) {
     }
   });
 
-  return rect;
+  return card;
 }
 
 function renderDeck(scene) {
@@ -241,22 +278,8 @@ function renderDeck(scene) {
   const deck = new Container();
   const DECK_CARD_COUNT = 10;
   for (let i = 0; i < DECK_CARD_COUNT; i += 1) {
-    const card = new Rectangle(
-      deckPosition.clone().subtract(0, i * CARD_STACK_OFFSET_PX),
-      CARD_WIDTH,
-      CARD_HEIGHT,
-      {
-        ...CARD_RECT_STYLES,
-        stroke: COLORS[4],
-        ...(i !== 0 && {
-          shadow: {
-            blur: 40,
-            position: [0, 3],
-            color: "#33333320",
-          },
-        }),
-      }
-    );
+    const card = createBlankCard();
+    card.position = deckPosition.clone().subtract(0, i * CARD_STACK_OFFSET_PX);
     deck.add(card);
   }
   const hintText = new Text(
