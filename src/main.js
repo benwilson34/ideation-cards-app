@@ -41,6 +41,7 @@ const CARD_BUTTON_STYLES = {
   hover: "#ffffff11",
   rounded: 4,
 };
+const CARD_STACK_OFFSET_PX = 4;
 const DECK_CONTROLS_SPACING_PX = 40;
 const CUSTOM_FONT_URL =
   // "//fonts.gstatic.com/s/courgette/v5/wEO_EBrAnc9BLjLQAUk1VvoK.woff2";
@@ -51,6 +52,7 @@ let allCardContents = [];
 let clickCount = 0;
 let deckPosition;
 let discardAreaPosition;
+let discardCount = 0;
 
 function parseCsv(str) {
   const HEADERS = ["id", "sideA", "sideB", "notes"];
@@ -128,14 +130,13 @@ function createRandomCard(initialPosition, dealPosition) {
   );
   rect.add(idText);
 
-  let isAnimatingDeal = true;
+  let isAnimatingMovement = true;
   let movementAnimationStartPosition = initialPosition.clone();
   let movementAnimationEndPosition = dealPosition.clone();
   let isAnimatingFlip = false;
-  let isAnimatingDiscard = false;
 
   function isAnimating() {
-    return isAnimatingDeal || isAnimatingFlip || isAnimatingDiscard;
+    return isAnimatingMovement || isAnimatingFlip;
   }
 
   const discardButton = new Button([CARD_WIDTH - PADDING - 22, PADDING], {
@@ -146,9 +147,14 @@ function createRandomCard(initialPosition, dealPosition) {
     if (isAnimating()) {
       return;
     }
+    isAnimatingMovement = true;
     movementAnimationStartPosition = rect.position.clone();
-    movementAnimationEndPosition = discardAreaPosition.clone();
-    isAnimatingDiscard = true;
+    movementAnimationEndPosition = discardAreaPosition
+      .clone()
+      .subtract(0, discardCount * CARD_STACK_OFFSET_PX);
+    draggable.stop();
+    // TODO remove other event listeners?
+    discardCount += 1;
   });
   rect.add(discardButton);
 
@@ -197,14 +203,17 @@ function createRandomCard(initialPosition, dealPosition) {
             2 /
             (CARD_FLIP_ANIMATION_TIMELINE[3] - CARD_FLIP_ANIMATION_TIMELINE[2])
         );
-      } else {
-        isAnimatingFlip = false;
-        animationFrameCount = 0;
       }
+
       animationFrameCount += 1;
+      if (animationFrameCount !== CARD_FLIP_ANIMATION_TIMELINE[3]) {
+        return;
+      }
+      animationFrameCount = 0;
+      isAnimatingFlip = false;
     }
 
-    if (isAnimatingDeal || isAnimatingDiscard) {
+    if (isAnimatingMovement) {
       const segmentOffset =
         animationFrameCount / CARD_MOVEMENT_ANIMATION_FRAME_LENGTH;
       const easedOffset = easeOutCubic(segmentOffset);
@@ -217,16 +226,7 @@ function createRandomCard(initialPosition, dealPosition) {
         return;
       }
       animationFrameCount = 0;
-
-      if (isAnimatingDiscard) {
-        isAnimatingDiscard = false;
-        draggable.stop();
-        return;
-      }
-      if (isAnimatingDeal) {
-        isAnimatingDeal = false;
-        return;
-      }
+      isAnimatingMovement = false;
     }
   });
 
@@ -240,10 +240,9 @@ function renderDeck(scene) {
   );
   const deck = new Container();
   const DECK_CARD_COUNT = 10;
-  const DECK_CARD_OFFSET_PX = 6;
   for (let i = 0; i < DECK_CARD_COUNT; i += 1) {
     const card = new Rectangle(
-      deckPosition.clone().subtract(0, i * DECK_CARD_OFFSET_PX),
+      deckPosition.clone().subtract(0, i * CARD_STACK_OFFSET_PX),
       CARD_WIDTH,
       CARD_HEIGHT,
       {
