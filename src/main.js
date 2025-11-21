@@ -21,6 +21,7 @@ const COLORS = [
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
+const CARD_DISCARD_ANIMATION_FRAME_LENGTH = 120;
 const CARD_RECT_STYLES = {
   fill: COLORS[4],
   rounded: 4,
@@ -47,6 +48,7 @@ const CUSTOM_FONT_URL =
 
 let allCardContents = [];
 let clickCount = 0;
+let discardAreaPosition;
 
 function parseCsv(str) {
   const HEADERS = ["id", "sideA", "sideB", "notes"];
@@ -89,7 +91,7 @@ function createRandomCard() {
     rotationCenter: [CARD_WIDTH / 2, CARD_HEIGHT / 2],
     rotation,
   });
-  rect.draggable();
+  const draggable = rect.draggable();
   rect.on(Pencil.MouseEvent.events.down, () => {
     // NOTE maybe there's some max zIndex that this would reach eventually, not sure
     clickCount += 1;
@@ -124,17 +126,28 @@ function createRandomCard() {
   );
   rect.add(idText);
 
+  let isAnimatingFlip = false;
+  let isAnimatingDiscard = false;
+  let discardAnimationPosition;
+
+  function isAnimating() {
+    return isAnimatingFlip || isAnimatingDiscard;
+  }
+
   const discardButton = new Button([CARD_WIDTH - PADDING - 22, PADDING], {
     ...CARD_BUTTON_STYLES,
     value: "X",
   });
   discardButton.on(Pencil.MouseEvent.events.down, () => {
-    // TODO animate
-    rect.delete();
+    if (isAnimating()) {
+      return;
+    }
+    discardAnimationPosition = rect.position.clone();
+    isAnimatingDiscard = true;
+    // rect.delete();
   });
   rect.add(discardButton);
 
-  let isAnimating = false;
   let animationFrameCount = 0;
   let isCardOnSideA = true;
   const flipButton = new Button([PADDING, PADDING], {
@@ -142,48 +155,64 @@ function createRandomCard() {
     value: "flip",
   });
   flipButton.on(Pencil.MouseEvent.events.down, () => {
-    if (isAnimating) {
+    if (isAnimating()) {
       return;
     }
-    isAnimating = true;
+    isAnimatingFlip = true;
   });
   rect.add(flipButton);
 
   rect.on("draw", () => {
-    if (!isAnimating) {
+    if (!isAnimating()) {
       return;
     }
 
-    // flip animation
-    if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[1]) {
-      const yScale = 1 - animationFrameCount / CARD_FLIP_ANIMATION_TIMELINE[1];
-      rect.options.scale.set(1, yScale);
-      rect.position.add(0, CARD_HEIGHT / 2 / CARD_FLIP_ANIMATION_TIMELINE[1]);
-    } else if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[2]) {
-      const nextCardSide = isCardOnSideA
-        ? cardContents.sideB
-        : cardContents.sideA;
-      text.text = nextCardSide;
-      isCardOnSideA = !isCardOnSideA;
-      rect.options.fill = COLORS[isCardOnSideA ? 4 : 5];
-      idText.text = `#${cardContents.id}${isCardOnSideA ? "a" : "b"}`;
-      rect.options.rotation = -1 * rect.options.rotation;
-    } else if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[3]) {
-      const segmentOffset =
-        animationFrameCount - CARD_FLIP_ANIMATION_TIMELINE[2];
-      const yScale = segmentOffset / CARD_FLIP_ANIMATION_TIMELINE[2];
-      rect.options.scale.set(1, yScale);
-      rect.position.subtract(
-        0,
-        CARD_HEIGHT /
-          2 /
-          (CARD_FLIP_ANIMATION_TIMELINE[3] - CARD_FLIP_ANIMATION_TIMELINE[2])
-      );
-    } else {
-      isAnimating = false;
-      animationFrameCount = 0;
+    if (isAnimatingFlip) {
+      if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[1]) {
+        const yScale =
+          1 - animationFrameCount / CARD_FLIP_ANIMATION_TIMELINE[1];
+        rect.options.scale.set(1, yScale);
+        rect.position.add(0, CARD_HEIGHT / 2 / CARD_FLIP_ANIMATION_TIMELINE[1]);
+      } else if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[2]) {
+        const nextCardSide = isCardOnSideA
+          ? cardContents.sideB
+          : cardContents.sideA;
+        text.text = nextCardSide;
+        isCardOnSideA = !isCardOnSideA;
+        rect.options.fill = COLORS[isCardOnSideA ? 4 : 5];
+        idText.text = `#${cardContents.id}${isCardOnSideA ? "a" : "b"}`;
+        rect.options.rotation = -1 * rect.options.rotation;
+      } else if (animationFrameCount <= CARD_FLIP_ANIMATION_TIMELINE[3]) {
+        const segmentOffset =
+          animationFrameCount - CARD_FLIP_ANIMATION_TIMELINE[2];
+        const yScale = segmentOffset / CARD_FLIP_ANIMATION_TIMELINE[2];
+        rect.options.scale.set(1, yScale);
+        rect.position.subtract(
+          0,
+          CARD_HEIGHT /
+            2 /
+            (CARD_FLIP_ANIMATION_TIMELINE[3] - CARD_FLIP_ANIMATION_TIMELINE[2])
+        );
+      } else {
+        isAnimatingFlip = false;
+        animationFrameCount = 0;
+      }
+      animationFrameCount += 1;
     }
-    animationFrameCount += 1;
+
+    if (isAnimatingDiscard) {
+      const segmentOffset =
+        animationFrameCount / CARD_DISCARD_ANIMATION_FRAME_LENGTH;
+      rect.position = discardAnimationPosition
+        .clone()
+        .lerp(discardAreaPosition, segmentOffset);
+      animationFrameCount += 1;
+      if (animationFrameCount === CARD_DISCARD_ANIMATION_FRAME_LENGTH) {
+        isAnimatingDiscard = false;
+        animationFrameCount = 0;
+        draggable.stop();
+      }
+    }
   });
 
   return rect;
@@ -237,7 +266,7 @@ function renderDeck(scene) {
 }
 
 function renderDiscardArea(scene) {
-  const discardAreaPosition = new Position(
+  discardAreaPosition = new Position(
     scene.center.x + DECK_CONTROLS_SPACING_PX / 2,
     -(CARD_HEIGHT / 2) - 2
   );
