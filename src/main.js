@@ -20,21 +20,21 @@ import Pencil, {
 import { easeOutCubic } from "./public/vendor/easing.js";
 
 // based on palette: https://coolors.co/palette/0081a7-00afb9-fdfcdc-fed9b7-f07167
-const COLORS = [
-  "#0081a7",
-  "#00afb9",
-  "#fdfcdc",
-  "#fed9b7",
-  "#f07167",
-  "#eebf25ff",
-];
-// TODO would be better to prepare Colors here; label semantically; literal lowlight colors here too
+let COLORS = {
+  backgroundA: new Color("#00afb9"),
+  backgroundB: new Color("#0081a7"),
+  cardASideMain: new Color("#f07167"),
+  cardASideBorder: new Color("#ed5145"),
+  cardBSideMain: new Color("#eebf25"),
+  cardBSideBorder: new Color("#be950e"),
+  cardText: new Color("#fff0e2"),
+};
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
 const CARD_MOVEMENT_ANIMATION_FRAME_LENGTH = 180;
 const CARD_RECT_STYLES = {
-  fill: COLORS[4],
+  fill: COLORS.cardASideMain,
   rounded: 4,
   // shadow: {
   //   blur: 40,
@@ -44,7 +44,7 @@ const CARD_RECT_STYLES = {
   cursor: Component.cursors.pointer,
 };
 const CARD_BUTTON_STYLES = {
-  foreground: COLORS[2],
+  foreground: COLORS.cardText,
   fontSize: 14,
   fill: "transparent",
   stroke: "#ffffff11",
@@ -102,17 +102,17 @@ function createBlankCard() {
     rotation: 0,
   });
 
-  const lowlightRect = mainRect.clone();
+  const borderRect = mainRect.clone();
   const LOWLIGHT_OFFSET_PX = 2;
-  lowlightRect.height = lowlightRect.height + LOWLIGHT_OFFSET_PX;
+  borderRect.height = borderRect.height + LOWLIGHT_OFFSET_PX;
 
-  const color = new Color(COLORS[4]).lightness(0.6);
-  lowlightRect.options.fill = color;
-  lowlightRect.options.stroke = color;
-  lowlightRect.options.zIndex = -1;
-  lowlightRect.options.rotation = 0;
-  mainRect.add(lowlightRect);
-  mainRect.lowlightRect = lowlightRect; // ?
+  const borderColor = COLORS.cardASideBorder;
+  borderRect.options.fill = borderColor;
+  borderRect.options.stroke = borderColor;
+  borderRect.options.zIndex = -1;
+  borderRect.options.rotation = 0;
+  mainRect.add(borderRect);
+  mainRect.borderRect = borderRect;
 
   return mainRect;
 }
@@ -137,7 +137,7 @@ function createRandomCard(initialPosition, dealPosition) {
     [PADDING * 3, CARD_HEIGHT / 2 - fontSize / 2 + 10],
     cardContents.sideA,
     {
-      fill: COLORS[2],
+      fill: COLORS.cardText,
       font: CUSTOM_FONT_URL,
       fontSize,
       align: Text.alignments.center,
@@ -152,7 +152,7 @@ function createRandomCard(initialPosition, dealPosition) {
     [PADDING, CARD_HEIGHT - ID_TEXT_FONT_SIZE - PADDING],
     `#${cardContents.id}a`,
     {
-      fill: COLORS[2],
+      fill: COLORS.cardText,
       fontSize: ID_TEXT_FONT_SIZE,
       cursor: Component.cursors.pointer,
     }
@@ -219,12 +219,15 @@ function createRandomCard(initialPosition, dealPosition) {
         text.text = nextCardSide;
         isCardOnSideA = !isCardOnSideA;
 
-        const nextColor = COLORS[isCardOnSideA ? 4 : 5];
-        card.options.fill = nextColor;
-        const nextLightness = isCardOnSideA ? 0.6 : 0.4;
-        const color = new Color(nextColor).lightness(nextLightness);
-        card.lowlightRect.options.fill = color;
-        card.lowlightRect.options.stroke = color;
+        const nextMainColor = isCardOnSideA
+          ? COLORS.cardASideMain
+          : COLORS.cardBSideMain;
+        const nextBorderColor = isCardOnSideA
+          ? COLORS.cardASideBorder
+          : COLORS.cardBSideBorder;
+        card.options.fill = nextMainColor;
+        card.borderRect.options.fill = nextBorderColor;
+        card.borderRect.options.stroke = nextBorderColor;
 
         idText.text = `#${cardContents.id}${isCardOnSideA ? "a" : "b"}`;
         card.options.rotation = -1 * card.options.rotation;
@@ -286,7 +289,7 @@ function renderDeck(scene) {
     deckPosition.clone().add(60, 120),
     "click to draw a new card",
     {
-      fill: COLORS[2],
+      fill: COLORS.cardText,
       fontSize: 16,
     }
   );
@@ -313,7 +316,7 @@ function renderDiscardArea(scene) {
 
   const outline = new Rectangle(discardAreaPosition, CARD_WIDTH, CARD_HEIGHT, {
     fill: "transparent",
-    stroke: COLORS[2],
+    stroke: COLORS.cardText,
     dashed: true,
     rounded: 4,
   });
@@ -357,8 +360,8 @@ async function main() {
   });
   const { width, height } = scene;
   scene.options.fill = new LinearGradient([0, 0], [0, height], {
-    0: COLORS[1],
-    1: COLORS[0],
+    0: COLORS.backgroundA,
+    1: COLORS.backgroundB,
   });
 
   const deck = renderDeck(scene);
