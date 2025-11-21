@@ -22,7 +22,7 @@ const COLORS = [
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
 const CARD_FLIP_ANIMATION_TIMELINE = [0, 120, 121, 241];
-const CARD_DISCARD_ANIMATION_FRAME_LENGTH = 180;
+const CARD_MOVEMENT_ANIMATION_FRAME_LENGTH = 180;
 const CARD_RECT_STYLES = {
   fill: COLORS[4],
   rounded: 4,
@@ -49,6 +49,7 @@ const CUSTOM_FONT_URL =
 
 let allCardContents = [];
 let clickCount = 0;
+let deckPosition;
 let discardAreaPosition;
 
 function parseCsv(str) {
@@ -81,7 +82,7 @@ function getRandomCardContents() {
   return allCardContents[randomIndex];
 }
 
-function createRandomCard() {
+function createRandomCard(initialPosition, dealPosition) {
   const cardContents = getRandomCardContents();
 
   const ROTATION_RANGE = 0.005;
@@ -127,12 +128,14 @@ function createRandomCard() {
   );
   rect.add(idText);
 
+  let isAnimatingDeal = true;
+  let movementAnimationStartPosition = initialPosition.clone();
+  let movementAnimationEndPosition = dealPosition.clone();
   let isAnimatingFlip = false;
   let isAnimatingDiscard = false;
-  let discardAnimationPosition;
 
   function isAnimating() {
-    return isAnimatingFlip || isAnimatingDiscard;
+    return isAnimatingDeal || isAnimatingFlip || isAnimatingDiscard;
   }
 
   const discardButton = new Button([CARD_WIDTH - PADDING - 22, PADDING], {
@@ -143,9 +146,9 @@ function createRandomCard() {
     if (isAnimating()) {
       return;
     }
-    discardAnimationPosition = rect.position.clone();
+    movementAnimationStartPosition = rect.position.clone();
+    movementAnimationEndPosition = discardAreaPosition.clone();
     isAnimatingDiscard = true;
-    // rect.delete();
   });
   rect.add(discardButton);
 
@@ -201,18 +204,28 @@ function createRandomCard() {
       animationFrameCount += 1;
     }
 
-    if (isAnimatingDiscard) {
+    if (isAnimatingDeal || isAnimatingDiscard) {
       const segmentOffset =
-        animationFrameCount / CARD_DISCARD_ANIMATION_FRAME_LENGTH;
+        animationFrameCount / CARD_MOVEMENT_ANIMATION_FRAME_LENGTH;
       const easedOffset = easeOutCubic(segmentOffset);
-      rect.position = discardAnimationPosition
+      rect.position = movementAnimationStartPosition
         .clone()
-        .lerp(discardAreaPosition, easedOffset);
+        .lerp(movementAnimationEndPosition, easedOffset);
+
       animationFrameCount += 1;
-      if (animationFrameCount === CARD_DISCARD_ANIMATION_FRAME_LENGTH) {
+      if (animationFrameCount !== CARD_MOVEMENT_ANIMATION_FRAME_LENGTH) {
+        return;
+      }
+      animationFrameCount = 0;
+
+      if (isAnimatingDiscard) {
         isAnimatingDiscard = false;
-        animationFrameCount = 0;
         draggable.stop();
+        return;
+      }
+      if (isAnimatingDeal) {
+        isAnimatingDeal = false;
+        return;
       }
     }
   });
@@ -221,7 +234,7 @@ function createRandomCard() {
 }
 
 function renderDeck(scene) {
-  const deckPosition = new Position(
+  deckPosition = new Position(
     scene.center.x - CARD_WIDTH - DECK_CONTROLS_SPACING_PX / 2,
     -CARD_HEIGHT / 2
   );
@@ -258,9 +271,12 @@ function renderDeck(scene) {
   deck.add(hintText);
   deck.on(Pencil.MouseEvent.events.down, () => {
     clickCount += 1;
-    const newCard = createRandomCard();
+    const dealPosition = scene.center
+      .clone()
+      .subtract(CARD_WIDTH / 2, CARD_HEIGHT / 2)
+      .add(getRandomDealPositionOffset());
+    const newCard = createRandomCard(deckPosition, dealPosition);
     newCard.options.zIndex = clickCount;
-    newCard.position.set(scene.center);
     scene.add(newCard);
   });
   return deck;
@@ -294,10 +310,19 @@ function renderDiscardArea(scene) {
   return discardArea;
 }
 
-function getRandomPositionOffset() {
+function getRandomDealPositionOffset() {
+  // TODO might be better to use the scene width/height
+  const X_RANGE = 300;
+  const Y_RANGE = 300;
+  const xOffset = Math.random() * X_RANGE - X_RANGE / 2; // center x offset
+  const yOffset = Math.random() * Y_RANGE - Y_RANGE / 2; // center y offset
+  return new Position(xOffset, yOffset);
+}
+
+function getRandomInitialDealPositionOffset(isLeft) {
   const X_RANGE = 50;
   const Y_RANGE = 100;
-  const xOffset = Math.random() * X_RANGE;
+  const xOffset = Math.random() * X_RANGE * (isLeft ? -1 : 1);
   const yOffset = Math.random() * Y_RANGE - Y_RANGE / 2; // center y offset
   return new Position(xOffset, yOffset);
 }
@@ -320,14 +345,17 @@ async function main() {
   const discardArea = renderDiscardArea(scene);
   scene.add(discardArea);
 
-  const card1 = createRandomCard();
-  const card1Offset = getRandomPositionOffset().multiply(-1, 1);
-  card1.position.set(
-    scene.center.subtract(CARD_WIDTH, CARD_HEIGHT / 2).add(card1Offset)
-  );
-  const card2 = createRandomCard();
-  const card2Offset = getRandomPositionOffset();
-  card2.position.set(scene.center.add(0, -CARD_HEIGHT / 2).add(card2Offset));
+  const card1DealPosition = scene.center
+    .clone()
+    .subtract(CARD_WIDTH, CARD_HEIGHT / 2)
+    .add(getRandomInitialDealPositionOffset(true));
+  const card1 = createRandomCard(deckPosition, card1DealPosition);
+
+  const card2DealPosition = scene.center
+    .clone()
+    .subtract(0, CARD_HEIGHT / 2)
+    .add(getRandomInitialDealPositionOffset(false));
+  const card2 = createRandomCard(deckPosition, card2DealPosition);
 
   scene.add(card1, card2);
 
