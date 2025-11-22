@@ -15,3 +15,11 @@ a little web-based app for practicing creativity
 ```bash
 npm start
 ```
+
+## deployment
+
+the app is hosted on GitHub Pages. See [`deploy-gh-pages.sh`](./deploy-gh-pages.sh) and the `gh-pages` branch.
+
+```bash
+npm run deploy
+```
