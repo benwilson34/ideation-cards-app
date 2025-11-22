@@ -66,8 +66,12 @@ let discardCount = 0;
 
 function parseCsv(str) {
   const HEADERS = ["id", "sideA", "sideB", "notes"];
+  let detectedLineBreak = "\n";
+  if (str.includes("\r\n")) {
+    detectedLineBreak = "\r\n";
+  }
   const objs = [];
-  const lines = str.split("\r\n").slice(1); // skip header row
+  const lines = str.split(detectedLineBreak).slice(1); // skip header row
   for (const line of lines) {
     const obj = Object.fromEntries(
       line.split(",").map((token, index) => [[HEADERS[index]], token])
