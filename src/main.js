@@ -73,8 +73,10 @@ const GUIDELINE_STYLES = {
   absolute: true,
 };
 
+let scene;
 let cardCollection;
 let deckCardContents = [];
+let deckCardPlaceholders = [];
 let clickCount = 0;
 let deckPosition;
 let discardAreaPosition;
@@ -303,17 +305,29 @@ function createRandomCard(initialPosition, dealPosition) {
   return card;
 }
 
+function getTargetDeckCardPlaceholderCount() {
+  const ACTUAL_CARDS_PER_DECK_CARD = 10;
+  const deckCardCount = Math.ceil(
+    deckCardContents.length / ACTUAL_CARDS_PER_DECK_CARD
+  );
+  return deckCardCount;
+}
+
 function renderDeck(scene) {
   deckPosition = new Position(
     scene.center.x - CARD_WIDTH - DECK_CONTROLS_SPACING_PX / 2,
     -CARD_HEIGHT / 2
   );
   const deck = new Container();
-  const DECK_CARD_COUNT = 10;
-  for (let i = 0; i < DECK_CARD_COUNT; i += 1) {
+  const ACTUAL_CARDS_PER_DECK_CARD = 10;
+  const deckCardCount = Math.ceil(
+    deckCardContents.length / ACTUAL_CARDS_PER_DECK_CARD
+  );
+  for (let i = 0; i < deckCardCount; i += 1) {
     const card = createBlankCard();
     card.position = deckPosition.clone().subtract(0, i * CARD_STACK_OFFSET_PX);
     deck.add(card);
+    deckCardPlaceholders.push(card);
   }
   const hintText = new Text(
     deckPosition.clone().add(60, 120),
@@ -324,20 +338,32 @@ function renderDeck(scene) {
     }
   );
   deck.add(hintText);
-  deck.on(Pencil.MouseEvent.events.down, () => {
-    clickCount += 1;
-    const dealPosition = scene.center
-      .clone()
-      .subtract(CARD_WIDTH / 2, CARD_HEIGHT / 2)
-      .add(getRandomDealPositionOffset());
-    const newCard = createRandomCard(deckPosition, dealPosition);
-    if (!newCard) {
-      return;
-    }
-    newCard.options.zIndex = clickCount;
-    cardCollection.add(newCard);
-  });
+  deck.on(Pencil.MouseEvent.events.down, drawCard);
   return deck;
+}
+
+function removeDeckCardPlaceholder() {
+  const placeholderCard = deckCardPlaceholders.pop();
+  placeholderCard.delete();
+}
+
+function drawCard() {
+  clickCount += 1;
+  const dealPosition = scene.center
+    .clone()
+    .subtract(CARD_WIDTH / 2, CARD_HEIGHT / 2)
+    .add(getRandomDealPositionOffset());
+  const newCard = createRandomCard(deckPosition, dealPosition);
+  if (!newCard) {
+    return;
+  }
+  newCard.options.zIndex = clickCount;
+  cardCollection.add(newCard);
+
+  const targetDeckCardPlaceholderCount = getTargetDeckCardPlaceholderCount();
+  if (deckCardPlaceholders.length !== targetDeckCardPlaceholderCount) {
+    removeDeckCardPlaceholder();
+  }
 }
 
 function renderDiscardArea(scene) {
@@ -481,7 +507,7 @@ async function main() {
   deckCardContents = await loadCardContentsCsv();
   shuffleArray(deckCardContents);
 
-  const scene = new Scene(undefined, {
+  scene = new Scene(undefined, {
     fill: "#000000",
   });
   const { width, height } = scene;
