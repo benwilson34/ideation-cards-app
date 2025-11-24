@@ -25,6 +25,7 @@ import Pencil, {
   Text,
 } from "./public/vendor/pencil.js";
 import { easeOutCubic } from "./public/vendor/easing.js";
+import { shuffleArray } from "./utils.js";
 
 // based on palette: https://coolors.co/palette/0081a7-00afb9-fdfcdc-fed9b7-f07167
 let COLORS = {
@@ -73,7 +74,7 @@ const GUIDELINE_STYLES = {
 };
 
 let cardCollection;
-let allCardContents = [];
+let deckCardContents = [];
 let clickCount = 0;
 let deckPosition;
 let discardAreaPosition;
@@ -108,9 +109,16 @@ async function loadCardContentsCsv() {
   return parseCsv(result);
 }
 
+function getNextDeckCardContents() {
+  if (deckCardContents.length === 0) {
+    return null;
+  }
+  return deckCardContents.pop();
+}
+
 function getRandomCardContents() {
-  const randomIndex = Math.floor(Math.random() * allCardContents.length);
-  return allCardContents[randomIndex];
+  const randomIndex = Math.floor(Math.random() * deckCardContents.length);
+  return deckCardContents[randomIndex];
 }
 
 function createBlankCard() {
@@ -138,7 +146,10 @@ function createBlankCard() {
 
 function createRandomCard(initialPosition, dealPosition) {
   const card = createBlankCard();
-  const cardContents = getRandomCardContents();
+  const cardContents = getNextDeckCardContents();
+  if (!cardContents) {
+    return null;
+  }
 
   const ROTATION_RANGE = 0.005;
   card.options.rotation = Math.random() * ROTATION_RANGE * 2 - ROTATION_RANGE;
@@ -320,6 +331,9 @@ function renderDeck(scene) {
       .subtract(CARD_WIDTH / 2, CARD_HEIGHT / 2)
       .add(getRandomDealPositionOffset());
     const newCard = createRandomCard(deckPosition, dealPosition);
+    if (!newCard) {
+      return;
+    }
     newCard.options.zIndex = clickCount;
     cardCollection.add(newCard);
   });
@@ -464,7 +478,8 @@ function getRandomInitialDealPositionOffset(isLeft) {
 }
 
 async function main() {
-  allCardContents = await loadCardContentsCsv();
+  deckCardContents = await loadCardContentsCsv();
+  shuffleArray(deckCardContents);
 
   const scene = new Scene(undefined, {
     fill: "#000000",
