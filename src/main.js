@@ -8,7 +8,7 @@
  *   - auto-scaling text to configurable bounding box
  *   - debug view that draws bounding box and origin point (and rotation point?)
  *   - debug scene tree
- *   - manually exclude component from click events
+ *   - manually exclude component from click events (e.g. card text)
  *   - scene editor 🙏
  */
 
@@ -67,7 +67,7 @@ const CUSTOM_FONT_URL =
   // "//fonts.gstatic.com/s/courgette/v5/wEO_EBrAnc9BLjLQAUk1VvoK.woff2";
   // "https://fonts.gstatic.com/s/amaticsc/v28/TUZyzwprpvBS1izr_vOECuSf.woff2";
   "https://fonts.gstatic.com/s/comingsoon/v20/qWcuB6mzpYL7AJ2VfdQR1t-VWDk.woff2";
-const SHALL_DISPLAY_GUIDELINES = true;
+const SHALL_DISPLAY_GUIDELINES = false;
 const GUIDELINE_STYLES = {
   stroke: "#ffff0080",
   absolute: true,
