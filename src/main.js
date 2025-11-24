@@ -2,8 +2,14 @@
  * Pencil.js wishlist:
  *   - `draggable` - add optional "target" container. I want to "seal" the card text behind a
  *      transparent "handle" rect which moves the whole card. Right now you can't drag cards if
- *      you mousedown on any card text. Similar point with the pseudo-3d lowlight
+ *      you mousedown on any card text. Similar point with the pseudo-3d card border
  *   - more control over (Rectangle) borders - per-side thickness, color, others?
+ *   - center text how??
+ *   - auto-scaling text to configurable bounding box
+ *   - debug view that draws bounding box and origin point (and rotation point?)
+ *   - debug scene tree
+ *   - manually exclude component from click events
+ *   - scene editor 🙏
  */
 
 import Pencil, {
@@ -11,12 +17,13 @@ import Pencil, {
   Color,
   Component,
   Container,
+  Line,
   LinearGradient,
   Position,
   Rectangle,
   Scene,
   Text,
-} from "https://unpkg.com/pencil.js@3.2.0/dist/pencil.esm.js"; // TODO copy dependency to local?
+} from "./public/vendor/pencil.js";
 import { easeOutCubic } from "./public/vendor/easing.js";
 
 // based on palette: https://coolors.co/palette/0081a7-00afb9-fdfcdc-fed9b7-f07167
@@ -28,6 +35,8 @@ let COLORS = {
   cardBSideMain: new Color("#eebf25"),
   cardBSideBorder: new Color("#be950e"),
   cardText: new Color("#fff0e2"),
+  // TODO card button colors?
+  panelBackground: new Color("#888"),
 };
 const CARD_WIDTH = 300;
 const CARD_HEIGHT = 200;
@@ -57,7 +66,13 @@ const CUSTOM_FONT_URL =
   // "//fonts.gstatic.com/s/courgette/v5/wEO_EBrAnc9BLjLQAUk1VvoK.woff2";
   // "https://fonts.gstatic.com/s/amaticsc/v28/TUZyzwprpvBS1izr_vOECuSf.woff2";
   "https://fonts.gstatic.com/s/comingsoon/v20/qWcuB6mzpYL7AJ2VfdQR1t-VWDk.woff2";
+const SHALL_DISPLAY_GUIDELINES = true;
+const GUIDELINE_STYLES = {
+  stroke: "#ffff0080",
+  absolute: true,
+};
 
+let cardCollection;
 let allCardContents = [];
 let clickCount = 0;
 let deckPosition;
@@ -107,8 +122,8 @@ function createBlankCard() {
   });
 
   const borderRect = mainRect.clone();
-  const LOWLIGHT_OFFSET_PX = 2;
-  borderRect.height = borderRect.height + LOWLIGHT_OFFSET_PX;
+  const BORDER_BOTTOM_OFFSET_PX = 2;
+  borderRect.height = borderRect.height + BORDER_BOTTOM_OFFSET_PX;
 
   const borderColor = COLORS.cardASideBorder;
   borderRect.options.fill = borderColor;
@@ -306,7 +321,7 @@ function renderDeck(scene) {
       .add(getRandomDealPositionOffset());
     const newCard = createRandomCard(deckPosition, dealPosition);
     newCard.options.zIndex = clickCount;
-    scene.add(newCard);
+    cardCollection.add(newCard);
   });
   return deck;
 }
@@ -337,6 +352,98 @@ function renderDiscardArea(scene) {
   // discardArea.add(hintText);
 
   return discardArea;
+}
+
+function renderSettingsControls(scene) {
+  const settingsControls = new Container();
+
+  const SETTINGS_PANEL_PADDING_PX = 40;
+  const settingsPanelWidth = scene.width - SETTINGS_PANEL_PADDING_PX * 2;
+  const settingsPanelHeight = scene.height - SETTINGS_PANEL_PADDING_PX * 2;
+  const settingsPanel = new Rectangle(
+    [SETTINGS_PANEL_PADDING_PX, SETTINGS_PANEL_PADDING_PX],
+    settingsPanelWidth,
+    settingsPanelHeight,
+    {
+      fill: COLORS.panelBackground,
+      rounded: 8,
+    }
+  );
+
+  const titleText = new Text(
+    [settingsPanelWidth / 2, SETTINGS_PANEL_PADDING_PX],
+    "SETTINGS",
+    {
+      align: Text.alignments.center,
+    }
+  );
+  settingsPanel.add(titleText);
+
+  const hintText = new Text(
+    [settingsPanelWidth / 2, SETTINGS_PANEL_PADDING_PX * 2],
+    "TODO 😎👍",
+    {
+      align: Text.alignments.center,
+    }
+  );
+  settingsPanel.add(hintText);
+
+  settingsPanel.hide();
+  settingsControls.add(settingsPanel);
+
+  const settingsToggleButton = new Button([0, 0], { value: "⚙" });
+  settingsToggleButton.on(Pencil.MouseEvent.events.down, () => {
+    if (settingsPanel.options.shown) {
+      settingsPanel.hide();
+    } else {
+      settingsPanel.show();
+    }
+  });
+  settingsControls.add(settingsToggleButton);
+
+  return settingsControls;
+}
+
+function renderDebug(container) {
+  const boundingBox = new Rectangle(
+    container.position,
+    container.width || 40,
+    container.height || 40,
+    {
+      fill: "transparent",
+      stroke: "#00ff0080",
+    }
+  );
+  boundingBox.isDebug = true;
+  container.add(boundingBox);
+
+  for (const child of container.children) {
+    if (!child.isDebug) {
+      renderDebug(child);
+    }
+  }
+}
+
+function renderGuidelines(scene) {
+  const guidelines = new Container();
+
+  const hCenterLine = new Line(
+    [0, scene.height / 2],
+    [[scene.width, scene.height / 2]],
+    GUIDELINE_STYLES
+  );
+  guidelines.add(hCenterLine);
+
+  const vCenterLine = new Line(
+    [scene.width / 2, 0],
+    [[scene.width / 2, scene.height]],
+    GUIDELINE_STYLES
+  );
+  guidelines.add(vCenterLine);
+
+  // renderDebug(scene);
+
+  return guidelines;
 }
 
 function getRandomDealPositionOffset() {
@@ -374,6 +481,9 @@ async function main() {
   const discardArea = renderDiscardArea(scene);
   scene.add(discardArea);
 
+  cardCollection = new Container();
+  scene.add(cardCollection);
+
   const card1DealPosition = scene.center
     .clone()
     .subtract(CARD_WIDTH, CARD_HEIGHT / 2)
@@ -386,7 +496,15 @@ async function main() {
     .add(getRandomInitialDealPositionOffset(false));
   const card2 = createRandomCard(deckPosition, card2DealPosition);
 
-  scene.add(card1, card2);
+  cardCollection.add(card1, card2);
+
+  // const settingsControls = renderSettingsControls(scene);
+  // scene.add(settingsControls);
+
+  if (SHALL_DISPLAY_GUIDELINES) {
+    const guidelines = renderGuidelines(scene);
+    scene.add(guidelines);
+  }
 
   const preloadFontText = new Text([0, 0], "", {
     font: CUSTOM_FONT_URL,
